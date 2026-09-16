@@ -188,6 +188,129 @@ describe('Tasks', () => {
     expect(new Set(keys).size).toBe(5);
   });
 
+  describe('Task Assignment & Activity History', () => {
+    let secondMember: TestUser;
+    let taskId: string;
+
+    beforeEach(async () => {
+      secondMember = await registerUser(app, 'Sarah Developer', 'sarah.dev@example.com');
+      const projectDoc = await connection.collection('projects').findOne({ _id: new connection.base.Types.ObjectId(projectId) });
+      await addOrganizationMember(connection, projectDoc!.organizationId.toString(), secondMember.id, OrganizationRole.MEMBER);
+      await addProjectMember(connection, projectId, secondMember.id, ProjectRole.MEMBER);
+
+      const taskRes = await request(app.getHttpServer())
+        .post(`/projects/${projectId}/tasks`)
+        .set('Authorization', authHeader(member))
+        .send({ title: 'Assignment test task' })
+        .expect(201);
+      taskId = taskRes.body.id;
+    });
+
+    it('allows a project member to assign a task to themselves', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/tasks/${taskId}/assignee`)
+        .set('Authorization', authHeader(member))
+        .send({ assigneeId: member.id })
+        .expect(200);
+
+      expect(response.body.assignee).toMatchObject({ email: member.email, name: 'Magd Ali' });
+    });
+
+    it('allows an authorized project role (OWNER/PM) to assign another project member', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/tasks/${taskId}/assignee`)
+        .set('Authorization', authHeader(owner))
+        .send({ assigneeId: secondMember.id })
+        .expect(200);
+
+      expect(response.body.assignee).toMatchObject({ email: secondMember.email, name: 'Sarah Developer' });
+    });
+
+    it('refuses to let a regular member assign another user', async () => {
+      await request(app.getHttpServer())
+        .patch(`/tasks/${taskId}/assignee`)
+        .set('Authorization', authHeader(member))
+        .send({ assigneeId: secondMember.id })
+        .expect(403);
+    });
+
+    it('refuses to assign a user outside the project', async () => {
+      await request(app.getHttpServer())
+        .patch(`/tasks/${taskId}/assignee`)
+        .set('Authorization', authHeader(owner))
+        .send({ assigneeId: outsider.id })
+        .expect(400);
+    });
+
+    it('tracks activity across all three assignee transitions and supports pagination', async () => {
+      // Transition 1: Unassigned -> Assigned
+      await request(app.getHttpServer())
+        .patch(`/tasks/${taskId}/assignee`)
+        .set('Authorization', authHeader(member))
+        .send({ assigneeId: member.id })
+        .expect(200);
+
+      // Transition 2: Assigned -> Different user
+      await request(app.getHttpServer())
+        .patch(`/tasks/${taskId}/assignee`)
+        .set('Authorization', authHeader(owner))
+        .send({ assigneeId: secondMember.id })
+        .expect(200);
+
+      // Transition 3: Assigned -> Unassigned
+      await request(app.getHttpServer())
+        .patch(`/tasks/${taskId}/assignee`)
+        .set('Authorization', authHeader(owner))
+        .send({ assigneeId: null })
+        .expect(200);
+
+      const response = await request(app.getHttpServer())
+        .get(`/tasks/${taskId}/activity`)
+        .set('Authorization', authHeader(member))
+        .expect(200);
+
+      expect(response.body.total).toBe(3);
+      expect(response.body.items).toHaveLength(3);
+
+      // Newest first:
+      // Item 0: Assigned -> Unassigned
+      expect(response.body.items[0]).toMatchObject({
+        type: 'TASK_ASSIGNEE_CHANGED',
+        actor: { email: owner.email },
+        metadata: {
+          from: { email: secondMember.email },
+          to: null,
+        },
+      });
+
+      // Item 1: Assigned -> Different user
+      expect(response.body.items[1]).toMatchObject({
+        type: 'TASK_ASSIGNEE_CHANGED',
+        actor: { email: owner.email },
+        metadata: {
+          from: { email: member.email },
+          to: { email: secondMember.email },
+        },
+      });
+
+      // Item 2: Unassigned -> Assigned
+      expect(response.body.items[2]).toMatchObject({
+        type: 'TASK_ASSIGNEE_CHANGED',
+        actor: { email: member.email },
+        metadata: {
+          from: null,
+          to: { email: member.email },
+        },
+      });
+    });
+
+    it('refuses to return activity history to someone outside the project', async () => {
+      await request(app.getHttpServer())
+        .get(`/tasks/${taskId}/activity`)
+        .set('Authorization', authHeader(outsider))
+        .expect(403);
+    });
+  });
 });
 
 

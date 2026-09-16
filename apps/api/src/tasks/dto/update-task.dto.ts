@@ -26,4 +26,7 @@ export class UpdateTaskDto {
   @IsOptional()
   @IsEnum(TASK_PRIORITIES)
   priority?: TaskPriority;
+
+  @IsOptional()
+  assigneeId?: string | null;
 }

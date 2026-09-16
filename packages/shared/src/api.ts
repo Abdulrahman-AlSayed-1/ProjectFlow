@@ -40,7 +40,6 @@ export interface ProjectMemberEntry {
   createdAt: string;
 }
 
-// assignee leaks from /tasks
 export interface TaskSummary {
   id: string;
   projectId: string;
@@ -51,6 +50,7 @@ export interface TaskSummary {
   priority: TaskPriority;
   commentCount: number;
   createdBy: UserSummary;
+  assignee: UserSummary | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -58,6 +58,18 @@ export interface TaskSummary {
 export interface TaskDetail extends TaskSummary {
   description?: string | null;
   project: Pick<ProjectSummary, 'id' | 'name' | 'key'>;
+}
+
+export interface TaskActivityEntry {
+  id: string;
+  taskId: string;
+  type: string;
+  actor: UserSummary;
+  metadata: {
+    from: UserSummary | null;
+    to: UserSummary | null;
+  };
+  createdAt: string;
 }
 
 export interface CommentEntry {

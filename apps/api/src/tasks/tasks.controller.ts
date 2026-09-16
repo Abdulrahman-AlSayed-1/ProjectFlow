@@ -10,10 +10,12 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import type { Paginated, TaskDetail, TaskSummary } from '@projectflow/shared';
+import type { Paginated, TaskActivityEntry, TaskDetail, TaskSummary } from '@projectflow/shared';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { toObjectId } from '../common/utils/object-id';
+import { AssignTaskDto } from './dto/assign-task.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
+import { ListActivityQueryDto } from './dto/list-activity.dto';
 import { ListTasksQueryDto } from './dto/list-tasks.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { UpdateTaskStatusDto } from './dto/update-task-status.dto';
@@ -77,6 +79,32 @@ export class TasksController {
       toObjectId(taskId, 'task id'),
       toObjectId(userId, 'user id'),
       dto,
+    );
+  }
+
+  @Patch('tasks/:taskId/assignee')
+  assignTask(
+    @Param('taskId') taskId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: AssignTaskDto,
+  ): Promise<TaskDetail> {
+    return this.tasksService.assignTask(
+      toObjectId(taskId, 'task id'),
+      toObjectId(userId, 'user id'),
+      dto,
+    );
+  }
+
+  @Get('tasks/:taskId/activity')
+  getActivity(
+    @Param('taskId') taskId: string,
+    @CurrentUser('id') userId: string,
+    @Query() query: ListActivityQueryDto,
+  ): Promise<Paginated<TaskActivityEntry>> {
+    return this.tasksService.getActivity(
+      toObjectId(taskId, 'task id'),
+      toObjectId(userId, 'user id'),
+      query,
     );
   }
 

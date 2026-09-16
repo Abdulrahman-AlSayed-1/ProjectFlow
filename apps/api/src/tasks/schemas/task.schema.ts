@@ -36,6 +36,9 @@ export class Task {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   createdBy: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null, index: true })
+  assigneeId?: Types.ObjectId | null;
+
   createdAt: Date;
   updatedAt: Date;
 }
