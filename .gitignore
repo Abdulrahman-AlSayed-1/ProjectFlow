@@ -21,3 +21,4 @@ pnpm-debug.log*
 !.vscode/extensions.json
 
 .internal/
+.mongo-data/
