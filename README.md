@@ -239,6 +239,8 @@ POST   /projects/:projectId/tasks
 GET    /tasks/:taskId
 PATCH  /tasks/:taskId
 PATCH  /tasks/:taskId/status
+PATCH  /tasks/:taskId/assignee
+GET    /tasks/:taskId/activity
 DELETE /tasks/:taskId
 
 GET    /tasks/:taskId/comments
@@ -265,3 +267,29 @@ parsing.
 
 Components are server components by default; `"use client"` is added only where
 interactivity or hooks require it.
+
+---
+
+## Technical Decisions
+
+1. **Atomic Concurrency for Task Numbering**:
+   Replaced naive `countDocuments({ projectId }) + 1` with an atomic `$inc` sequence counter on the `Project` document (`taskSequence`) using `findByIdAndUpdate(..., { new: true })`. This guarantees strictly monotonic identifiers (`ENG-1`, `ENG-2`) without race conditions under concurrent creation, backed by a compound unique index on `{ projectId: 1, number: 1 }`.
+2. **Project Membership Enforcement on Task Mutations**:
+   Fixed the critical authorization bug where unauthenticated or unauthorized users could alter task statuses. `TasksService.updateStatus` now explicitly asserts project access via `ProjectAccessService.assertCanView(task.projectId, userId)`.
+3. **Role-Based Task Assignment Rules**:
+   - Rule 1 (Scope): The target assignee must be an active project member (`BadRequestException` 400 if not).
+   - Rule 2 (Privilege): `OWNER`, `ADMIN`, and `PROJECT_MANAGER` can assign any member; regular members may only assign tasks to themselves (`ForbiddenException` 403 otherwise).
+   - Rule 3 (Unassignment): Only managers or the currently assigned user can remove an assignee.
+4. **Batch User Population for Activity Logs**:
+   To prevent N+1 database queries on `GET /tasks/:taskId/activity`, actor and assignee user IDs are extracted and resolved in a single batch query via `UsersService.findManyByIds`.
+5. **Radix-Based UI & Hydration Safety**:
+   Built accessible assignee selector and activity timeline components with plain-English relative timestamps and skeletons. Root layout handles browser extension attributes via `suppressHydrationWarning`.
+
+---
+
+## Known Limitations
+
+1. **Activity History Scope**: Currently tracks assignee changes only (`TASK_ASSIGNEE_CHANGED`). Status, priority, and description edits can be incorporated into the same event model in future iterations.
+2. **Offset Pagination on Activity**: Activity logs currently use standard `skip/limit` pagination with UI page buttons. At extreme dataset scales (>100k events per task), migration to keyset/cursor pagination (`_id < cursor`) is recommended.
+3. **Real-Time Client Updates**: The UI updates immediately upon user mutations via TanStack Query cache invalidation. Multi-user real-time synchronization currently relies on window refocus / refetches rather than WebSockets / SSE.
+
