@@ -146,4 +146,48 @@ describe('Tasks', () => {
     expect(response.body.total).toBe(1);
     expect(response.body.items[0]).toMatchObject({ title: 'Work in flight' });
   });
+
+  it('refuses to update task status for someone outside the project', async () => {
+    const created = await request(app.getHttpServer())
+      .post(`/projects/${projectId}/tasks`)
+      .set('Authorization', authHeader(member))
+      .send({ title: 'Task to protect' })
+      .expect(201);
+
+    const taskId = created.body.id;
+
+    await request(app.getHttpServer())
+      .patch(`/tasks/${taskId}/status`)
+      .set('Authorization', authHeader(outsider))
+      .send({ status: TaskStatus.DONE })
+      .expect(403);
+  });
+
+  it('generates unique sequential identifiers under concurrent task creation', async () => {
+    const titles = ['Task Alpha', 'Task Beta', 'Task Gamma', 'Task Delta', 'Task Epsilon'];
+
+    const responses = await Promise.all(
+      titles.map((title) =>
+        request(app.getHttpServer())
+          .post(`/projects/${projectId}/tasks`)
+          .set('Authorization', authHeader(member))
+          .set('Connection', 'close')
+          .send({ title }),
+      ),
+    );
+
+    for (const res of responses) {
+      expect(res.status).toBe(201);
+    }
+
+    const numbers = responses.map((res) => res.body.number as number);
+    const keys = responses.map((res) => res.body.key as string);
+
+    expect(new Set(numbers).size).toBe(5);
+    expect(numbers.sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5]);
+    expect(new Set(keys).size).toBe(5);
+  });
+
 });
+
+

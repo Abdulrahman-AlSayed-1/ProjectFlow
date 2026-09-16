@@ -58,8 +58,19 @@ export class TasksService {
   ): Promise<TaskDetail> {
     const { project } = await this.projectAccessService.assertCanView(projectId, userId);
 
-    const taskCount = await this.taskModel.countDocuments({ projectId });
-    const number = taskCount + 1;
+    const updatedProject = await this.projectModel
+      .findByIdAndUpdate(
+        projectId,
+        { $inc: { taskSequence: 1 } },
+        { new: true },
+      )
+      .exec();
+
+    if (!updatedProject) {
+      throw new NotFoundException('Project not found');
+    }
+
+    const number = updatedProject.taskSequence;
 
     const task = await this.taskModel.create({
       projectId,
@@ -72,7 +83,7 @@ export class TasksService {
       createdBy: userId,
     });
 
-    return this.toDetail(task, project);
+    return this.toDetail(task, updatedProject);
   }
 
   async findOne(taskId: Types.ObjectId, userId: Types.ObjectId): Promise<TaskDetail> {
@@ -113,13 +124,18 @@ export class TasksService {
     return this.toDetail(task, access.project);
   }
 
-  async updateStatus(taskId: Types.ObjectId, dto: UpdateTaskStatusDto): Promise<TaskDetail> {
+  async updateStatus(
+    taskId: Types.ObjectId,
+    userId: Types.ObjectId,
+    dto: UpdateTaskStatusDto,
+  ): Promise<TaskDetail> {
     const task = await this.findTaskOrFail(taskId);
+    const access = await this.projectAccessService.assertCanView(task.projectId, userId);
 
     task.status = dto.status;
     await task.save();
 
-    return this.toDetail(task);
+    return this.toDetail(task, access.project);
   }
 
   async remove(taskId: Types.ObjectId, userId: Types.ObjectId): Promise<void> {
