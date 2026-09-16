@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { ClockCounterClockwiseIcon } from '@phosphor-icons/react/dist/ssr';
 import type { TaskActivityEntry } from '@projectflow/shared';
 import { Avatar } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCurrentUser } from '@/features/auth/hooks';
 import { formatRelativeTime } from '@/lib/format';
 import { useTaskActivity } from '../hooks';
 
@@ -35,9 +35,6 @@ function renderActivityDescription(activity: TaskActivityEntry): string {
 
   // Assigned -> Unassigned
   if (from && !to) {
-    if (activity.actor.id === from.id) {
-      return `${actorName} removed the assignee`;
-    }
     return `${actorName} removed the assignee`;
   }
 
@@ -48,7 +45,6 @@ export function TaskActivityTimeline({ taskId }: TaskActivityTimelineProps) {
   const [page, setPage] = useState(1);
   const pageSize = 15;
   const { data, isPending, isError, error } = useTaskActivity(taskId, page, pageSize);
-  const { data: currentUser } = useCurrentUser();
 
   if (isPending) {
     return (
@@ -76,7 +72,6 @@ export function TaskActivityTimeline({ taskId }: TaskActivityTimelineProps) {
 
   const activities = data?.items ?? [];
   const total = data?.total ?? 0;
-  const hasMore = activities.length < total;
 
   return (
     <section aria-label="Task Activity" className="space-y-3 pt-4 border-t border-border">
@@ -116,6 +111,32 @@ export function TaskActivityTimeline({ taskId }: TaskActivityTimelineProps) {
             </li>
           ))}
         </ul>
+      )}
+
+      {total > pageSize && (
+        <div className="flex items-center justify-between pt-2 border-t border-border/50">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            Previous
+          </Button>
+          <span className="text-[11px] text-subtle-foreground">
+            Page {page} of {Math.ceil(total / pageSize)}
+          </span>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={page * pageSize >= total}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </Button>
+        </div>
       )}
     </section>
   );
