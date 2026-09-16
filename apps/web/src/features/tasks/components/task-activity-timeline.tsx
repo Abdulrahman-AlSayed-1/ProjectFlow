@@ -43,7 +43,7 @@ function renderActivityDescription(activity: TaskActivityEntry): string {
 
 export function TaskActivityTimeline({ taskId }: TaskActivityTimelineProps) {
   const [page, setPage] = useState(1);
-  const pageSize = 15;
+  const pageSize = 5;
   const { data, isPending, isError, error } = useTaskActivity(taskId, page, pageSize);
 
   if (isPending) {

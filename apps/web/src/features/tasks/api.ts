@@ -62,7 +62,7 @@ export function assignTask(taskId: string, assigneeId: string | null): Promise<T
 export function fetchTaskActivity(
   taskId: string,
   page: number = 1,
-  pageSize: number = 20,
+  pageSize: number = 10,
 ): Promise<Paginated<TaskActivityEntry>> {
   return apiRequest<Paginated<TaskActivityEntry>>(`/tasks/${taskId}/activity`, {
     query: { page, pageSize },
