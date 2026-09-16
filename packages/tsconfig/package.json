@@ -7,5 +7,11 @@
     "nest.json",
     "nextjs.json",
     "library.json"
-  ]
+  ],
+  "exports": {
+    "./base.json": "./base.json",
+    "./nest.json": "./nest.json",
+    "./nextjs.json": "./nextjs.json",
+    "./library.json": "./library.json"
+  }
 }

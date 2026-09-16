@@ -40,6 +40,7 @@ export interface ProjectMemberEntry {
   createdAt: string;
 }
 
+// assignee leaks from /tasks
 export interface TaskSummary {
   id: string;
   projectId: string;

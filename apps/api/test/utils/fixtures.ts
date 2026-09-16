@@ -78,6 +78,7 @@ export async function createProject(
     key,
     description: null,
     createdBy: toObjectId(connection, createdBy),
+    taskSequence: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
