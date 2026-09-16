@@ -21,8 +21,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <QueryProvider>
           {children}
           <Toaster position="bottom-right" richColors closeButton />

@@ -40,7 +40,8 @@ The project is a TypeScript monorepo using pnpm workspaces and Turborepo, split 
 - `Organization` (1) -> `OrganizationMember` (many) -> `User` (1): Users hold org-level roles.
 - `Project` (1) -> `ProjectMember` (many) -> `User` (1): Users hold project-level roles.
 - `Project` (1) -> `Task` (many): Tasks belong to a project and carry a project-specific key (`ENG-1`, `ENG-2`).
-- `Task` (many) -> `User` (1 via `createdBy`, and soon `assignee`): Tracks who created the task and who is assigned to it.
+- `Task` (many) -> `User` (1 via `createdBy`, and 1 via nullable `assigneeId`): Each task points to at most one assigned user, while a single user can be assigned to multiple tasks.
+- `Task` (1) -> `TaskActivity` (many): An append-only audit log capturing lifecycle events (e.g. assignee changes) on the task.
 - `Task` (1) -> `Comment` (many): Threaded comments belong to a task and reference an author `User`.
 
 ---
