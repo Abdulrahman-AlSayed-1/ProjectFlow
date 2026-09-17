@@ -22,3 +22,8 @@ pnpm-debug.log*
 
 .internal/
 .mongo-data/
+
+# Deliverables generated for upload
+*.pdf
+*.zip
+
